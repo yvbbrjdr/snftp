@@ -89,7 +89,7 @@ void MainWidget::socketReadyRead()
             recvFileLen = 0;
             for (int i = 0; i < len.length(); ++i) {
                 recvFileLen <<= 8;
-                recvFileLen |= len[i];
+                recvFileLen |= static_cast<unsigned char>(len[i]);
             }
 
             bytesRecved = 0;

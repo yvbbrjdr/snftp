@@ -12,11 +12,13 @@ SOURCES += \
         crypto.cpp \
         main.cpp \
         mainwidget.cpp \
+        sendjob.cpp \
         startupdialog.cpp
 
 HEADERS += \
         crypto.h \
         mainwidget.h \
+        sendjob.h \
         startupdialog.h
 
 FORMS += \

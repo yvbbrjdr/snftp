@@ -148,7 +148,7 @@ void StartupDialog::socketErrored()
     socket->deleteLater();
     socket = nullptr;
 
-    QMessageBox::critical(this, "Error", QString("Failed to connect: %3").arg(errorString));
+    QMessageBox::critical(this, "Error", QString("Failed to connect: %1").arg(errorString));
     ui->launchPushButton->setText("Launch");
     setUiEnabled(true);
 }
@@ -157,5 +157,5 @@ void StartupDialog::startMainWidget()
 {
     Crypto::setPassword(ui->passwordLineEdit->text());
     (new MainWidget(ui->savePathLineEdit->text(), socket))->show();
-    hide();
+    close();
 }

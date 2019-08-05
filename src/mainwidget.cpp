@@ -18,6 +18,9 @@ MainWidget::MainWidget(const QString &savePath, QTcpSocket *socket, QWidget *par
     socket->setParent(this);
     socket->setSocketOption(QTcpSocket::LowDelayOption, 1);
 
+    ui->receiveListView->setModel(&recvStringListModel);
+    ui->sendListView->setModel(&sendStringListModel);
+
     connect(socket, &QTcpSocket::readyRead, this, &MainWidget::socketReadyRead);
     connect(socket, &QTcpSocket::bytesWritten, this, &MainWidget::socketBytesWritten);
     connect(socket, &QTcpSocket::disconnected, this, &MainWidget::socketDisconnected);
@@ -39,6 +42,23 @@ void MainWidget::socketWriteEncrypt(const QByteArray &data)
     socket->write(cipherText);
 }
 
+void MainWidget::updateSendListView()
+{
+    QStringList sendStringList;
+    for (int i = 0; i < sendJobs.length(); ++i) {
+        QString entry(sendJobs[i]->getFilename() + " - ");
+        if (i < curJobIndex)
+            entry += "Done";
+        else if (i == curJobIndex)
+            entry += "Sending";
+        else
+            entry += "Waiting";
+        sendStringList.append(entry);
+    }
+    sendStringListModel.setStringList(sendStringList);
+    ui->sendListView->scrollToBottom();
+}
+
 void MainWidget::dragEnterEvent(QDragEnterEvent *e)
 {
     if (e->mimeData()->hasUrls())
@@ -48,6 +68,7 @@ void MainWidget::dragEnterEvent(QDragEnterEvent *e)
 void MainWidget::dropEvent(QDropEvent *e)
 {
     const bool stopped = curJobIndex == sendJobs.length();
+
     foreach (const QUrl &url, e->mimeData()->urls()) {
         const QString filename(url.toLocalFile());
         const QFileInfo info(filename);
@@ -65,6 +86,9 @@ void MainWidget::dropEvent(QDropEvent *e)
         }
         sendJobs.append(new SendJob(filename));
     }
+
+    updateSendListView();
+
     if (stopped)
         socketBytesWritten();
 }
@@ -95,12 +119,18 @@ void MainWidget::socketReadyRead()
 
             bytesRecved = 0;
 
-            const QString filename(saveDir.absoluteFilePath(QString::fromUtf8(buf.mid(8))));
-            recvFile.setFileName(filename);
+            const QString filename(QString::fromUtf8(buf.mid(8)));
+            const QString path(saveDir.absoluteFilePath(filename));
+            recvFile.setFileName(path);
             if (!recvFile.open(QIODevice::WriteOnly)) {
-                QMessageBox::critical(this, "Error", QString("Error opening file: %1").arg(filename));
+                QMessageBox::critical(this, "Error", QString("Error opening file: %1").arg(path));
                 close();
             }
+
+            QStringList recvStringList(recvStringListModel.stringList());
+            recvStringList.append(filename + " - Receiving");
+            recvStringListModel.setStringList(recvStringList);
+            ui->receiveListView->scrollToBottom();
 
             recvState = CONTENT;
         } else if (recvState == CONTENT) {
@@ -110,6 +140,16 @@ void MainWidget::socketReadyRead()
             ui->receiveProgressBar->setValue(static_cast<int>(bytesRecved * 100 / recvFileLen));
             if (recvFileLen == bytesRecved) {
                 recvFile.close();
+
+                QStringList recvStringList(recvStringListModel.stringList());
+                QString back(recvStringList.back());
+                back = back.left(back.length() - 9);
+                back += "Done";
+                recvStringList.pop_back();
+                recvStringList.append(back);
+                recvStringListModel.setStringList(recvStringList);
+                ui->receiveListView->scrollToBottom();
+
                 recvState = METADATA;
             }
         }
@@ -133,14 +173,17 @@ void MainWidget::socketBytesWritten()
         data += filename.toUtf8();
         socketWriteEncrypt(data);
         curJob.metadataSent = true;
+
         return;
     }
 
     socketWriteEncrypt(curJob.read(64000));
     ui->sendProgressBar->setValue(static_cast<int>(curJob.getBytesRead() * 100 / curJob.getFileSize()));
 
-    if (curJob.atEnd())
+    if (curJob.atEnd()) {
         ++curJobIndex;
+        updateSendListView();
+    }
 }
 
 void MainWidget::socketDisconnected()

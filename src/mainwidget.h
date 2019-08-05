@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QDragEnterEvent>
 #include <QMimeData>
+#include <QStringListModel>
 #include <QTcpSocket>
 #include <QVector>
 #include <QWidget>
@@ -33,7 +34,10 @@ private:
     qint64 recvFileLen;
     qint64 bytesRecved;
     QFile recvFile;
+    QStringListModel recvStringListModel;
+    QStringListModel sendStringListModel;
     void socketWriteEncrypt(const QByteArray &data);
+    void updateSendListView();
 protected:
     void dragEnterEvent(QDragEnterEvent *e);
     void dropEvent(QDropEvent *e);

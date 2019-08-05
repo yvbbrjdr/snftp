@@ -11,6 +11,11 @@ QString SendJob::getFilename()
     return QFileInfo(file).fileName();
 }
 
+qint64 SendJob::getBytesRead()
+{
+    return bytesRead;
+}
+
 qint64 SendJob::getFileSize()
 {
     return file.size();

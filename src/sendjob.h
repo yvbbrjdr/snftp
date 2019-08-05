@@ -8,6 +8,7 @@ public:
     SendJob(const QString &path);
     ~SendJob();
     QString getFilename();
+    qint64 getBytesRead();
     qint64 getFileSize();
     bool atEnd();
     QByteArray read(qint64 size);

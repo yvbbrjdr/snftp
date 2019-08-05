@@ -16,6 +16,7 @@ MainWidget::MainWidget(const QString &savePath, QTcpSocket *socket, QWidget *par
 {
     ui->setupUi(this);
     socket->setParent(this);
+    socket->setSocketOption(QTcpSocket::LowDelayOption, 1);
 
     connect(socket, &QTcpSocket::readyRead, this, &MainWidget::socketReadyRead);
     connect(socket, &QTcpSocket::bytesWritten, this, &MainWidget::socketBytesWritten);
@@ -106,6 +107,7 @@ void MainWidget::socketReadyRead()
             recvFile.write(buf);
 
             bytesRecved += buf.length();
+            ui->receiveProgressBar->setValue(static_cast<int>(bytesRecved * 100 / recvFileLen));
             if (recvFileLen == bytesRecved) {
                 recvFile.close();
                 recvState = METADATA;
@@ -134,7 +136,8 @@ void MainWidget::socketBytesWritten()
         return;
     }
 
-    socketWriteEncrypt(curJob.read(1024));
+    socketWriteEncrypt(curJob.read(64000));
+    ui->sendProgressBar->setValue(static_cast<int>(curJob.getBytesRead() * 100 / curJob.getFileSize()));
 
     if (curJob.atEnd())
         ++curJobIndex;

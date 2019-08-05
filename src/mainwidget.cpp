@@ -73,7 +73,7 @@ void MainWidget::socketReadyRead()
     recvBuffer += socket->readAll();
 
     for (;;) {
-        const quint16 len = static_cast<quint16>((recvBuffer[0] << 8) | recvBuffer[1]);
+        const quint16 len = static_cast<quint16>((static_cast<unsigned char>(recvBuffer[0]) << 8) | static_cast<unsigned char>(recvBuffer[1]));
         if (recvBuffer.length() < len + 2)
             break;
 

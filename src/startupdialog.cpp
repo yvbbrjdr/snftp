@@ -113,6 +113,9 @@ void StartupDialog::launchPushButtonClicked()
         connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QTcpSocket::error),
                 this, &StartupDialog::socketErrored);
         socket->connectToHost(address, port);
+        if (socket == nullptr)
+            // Already failed.
+            return;
         ui->launchPushButton->setText("Connecting...");
     }
 

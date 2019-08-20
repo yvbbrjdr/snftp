@@ -47,7 +47,7 @@ void StartupDialog::serverRadioButtonClicked()
 
 void StartupDialog::clientRadioButtonClicked()
 {
-    ui->addressLineEdit->setText("");
+    ui->addressLineEdit->selectAll();
     ui->addressLineEdit->setFocus();
 }
 

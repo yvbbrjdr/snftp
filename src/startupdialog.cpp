@@ -4,13 +4,15 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QHostInfo>
 #include <QMessageBox>
+#include <QNetworkInterface>
 #include <QStandardPaths>
 
 #include "crypto.h"
 #include "mainwidget.h"
 
-StartupDialog::StartupDialog(QWidget *parent) : QDialog(parent), ui(new Ui::StartupDialog), server(nullptr), socket(nullptr)
+StartupDialog::StartupDialog(QWidget *parent) : QDialog(parent), ui(new Ui::StartupDialog), server(nullptr), socket(nullptr), broadcastSocket(new QUdpSocket(this))
 {
     ui->setupUi(this);
 
@@ -18,9 +20,16 @@ StartupDialog::StartupDialog(QWidget *parent) : QDialog(parent), ui(new Ui::Star
     connect(ui->clientRadioButton, &QRadioButton::clicked, this, &StartupDialog::clientRadioButtonClicked);
     connect(ui->selectSavePathToolButton, &QToolButton::clicked, this, &StartupDialog::selectSavePathToolButtonClicked);
     connect(ui->launchPushButton, &QPushButton::clicked, this, &StartupDialog::launchPushButtonClicked);
+    connect(ui->refreshPushButton, &QPushButton::clicked, this, &StartupDialog::refreshPushButtonClicked);
+    connect(ui->hostListView, &QListView::clicked, this, &StartupDialog::hostListViewClicked);
+    connect(broadcastSocket, &QUdpSocket::readyRead, this, &StartupDialog::broadcastSocketReadyRead);
 
     const QDir downloadsDir(QStandardPaths::writableLocation(QStandardPaths::DownloadLocation));
     ui->savePathLineEdit->setText(downloadsDir.absoluteFilePath("snftp"));
+    ui->hostListView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->hostListView->setModel(&hostStringListModel);
+    broadcastSocket->bind(DEFAULT_PORT);
+    refreshPushButtonClicked();
 }
 
 StartupDialog::~StartupDialog()
@@ -34,6 +43,8 @@ void StartupDialog::setUiEnabled(bool enabled)
     ui->clientRadioButton->setEnabled(enabled);
     ui->addressLineEdit->setEnabled(enabled);
     ui->portLineEdit->setEnabled(enabled);
+    ui->hostListView->setEnabled(enabled);
+    ui->refreshPushButton->setEnabled(enabled);
     ui->passwordLineEdit->setEnabled(enabled);
     ui->savePathLineEdit->setEnabled(enabled);
     ui->selectSavePathToolButton->setEnabled(enabled);
@@ -158,9 +169,59 @@ void StartupDialog::socketErrored()
 
 void StartupDialog::startMainWidget()
 {
+    broadcastSocket->close();
     Crypto::setPassword(ui->passwordLineEdit->text());
     MainWidget *mainWidget = new MainWidget(ui->savePathLineEdit->text(), socket);
     mainWidget->setAttribute(Qt::WA_DeleteOnClose);
     mainWidget->show();
     close();
+}
+
+void StartupDialog::refreshPushButtonClicked()
+{
+    broadcastSocket->writeDatagram(QByteArray(1, 0), QHostAddress::Broadcast, DEFAULT_PORT);
+    hostStringListModel.setStringList(QStringList());
+    hostAddressList.clear();
+    sendHostname(QHostAddress::Broadcast);
+}
+
+void StartupDialog::broadcastSocketReadyRead()
+{
+    while (broadcastSocket->hasPendingDatagrams()) {
+        QByteArray data;
+        QHostAddress host;
+        data.resize(broadcastSocket->pendingDatagramSize());
+        broadcastSocket->readDatagram(data.data(), data.size(), &host);
+        bool ok = true;
+        foreach (QHostAddress other, QNetworkInterface::allAddresses()) {
+            if (host.isEqual(other)) {
+                ok = false;
+                break;
+            }
+        }
+        if (ok) {
+            if (data.size() == 1 && data.data()[0] == 0) {
+                sendHostname(host);
+            } else if (hostAddressList.indexOf(host) == -1) {
+                QString hostname(QString::fromUtf8(data));
+                QStringList stringList(hostStringListModel.stringList());
+                stringList.append(hostname + " (" + host.toString() + ')');
+                hostStringListModel.setStringList(stringList);
+                hostAddressList.append(host);
+            }
+        }
+    }
+}
+
+
+void StartupDialog::hostListViewClicked(const QModelIndex &index)
+{
+    ui->clientRadioButton->click();
+    ui->addressLineEdit->setText(hostAddressList.at(index.row()).toString());
+}
+
+
+void StartupDialog::sendHostname(const QHostAddress &addr)
+{
+    broadcastSocket->writeDatagram(QHostInfo::localHostName().toUtf8(), addr, DEFAULT_PORT);
 }

@@ -18,6 +18,8 @@ MainWidget::MainWidget(const QString &savePath, QTcpSocket *socket, QWidget *par
     socket->setParent(this);
     socket->setSocketOption(QTcpSocket::LowDelayOption, 1);
 
+    ui->receiveListView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->sendListView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->receiveListView->setModel(&recvStringListModel);
     ui->sendListView->setModel(&sendStringListModel);
 

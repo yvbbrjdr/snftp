@@ -159,6 +159,8 @@ void StartupDialog::socketErrored()
 void StartupDialog::startMainWidget()
 {
     Crypto::setPassword(ui->passwordLineEdit->text());
-    (new MainWidget(ui->savePathLineEdit->text(), socket))->show();
+    MainWidget *mainWidget = new MainWidget(ui->savePathLineEdit->text(), socket);
+    mainWidget->setAttribute(Qt::WA_DeleteOnClose);
+    mainWidget->show();
     close();
 }

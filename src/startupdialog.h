@@ -29,6 +29,8 @@ private:
     void setUiEnabled(bool enabled);
     void startMainWidget();
     void sendHostname(const QHostAddress &addr);
+    void sendOffline();
+    void closeEvent(QCloseEvent *event);
 private slots:
     void serverRadioButtonClicked();
     void clientRadioButtonClicked();

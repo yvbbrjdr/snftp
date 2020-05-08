@@ -170,7 +170,6 @@ void StartupDialog::socketErrored()
 
 void StartupDialog::startMainWidget()
 {
-    broadcastSocket->close();
     Crypto::setPassword(ui->passwordLineEdit->text());
     MainWidget *mainWidget = new MainWidget(ui->savePathLineEdit->text(), socket);
     mainWidget->setAttribute(Qt::WA_DeleteOnClose);
@@ -203,6 +202,14 @@ void StartupDialog::broadcastSocketReadyRead()
         if (ok) {
             if (data.size() == 1 && data.data()[0] == 0) {
                 sendHostname(host);
+            } else if (data.size() == 1 && data.data()[0] == 1) {
+                int index = hostAddressList.indexOf(host);
+                if (index != -1) {
+                    QStringList hostStringList = hostStringListModel.stringList();
+                    hostStringList.removeAt(index);
+                    hostStringListModel.setStringList(hostStringList);
+                    hostAddressList.removeAt(index);
+                }
             } else if (hostAddressList.indexOf(host) == -1) {
                 QString hostname(QString::fromUtf8(data));
                 QStringList stringList(hostStringListModel.stringList());
@@ -225,4 +232,16 @@ void StartupDialog::hostListViewClicked(const QModelIndex &index)
 void StartupDialog::sendHostname(const QHostAddress &addr)
 {
     broadcastSocket->writeDatagram(QHostInfo::localHostName().toUtf8(), addr, DEFAULT_PORT);
+}
+
+void StartupDialog::sendOffline()
+{
+    broadcastSocket->writeDatagram(QByteArray(1, 1), QHostAddress::Broadcast, DEFAULT_PORT);
+}
+
+void StartupDialog::closeEvent(QCloseEvent *event)
+{
+    sendOffline();
+    broadcastSocket->close();
+    QDialog::closeEvent(event);
 }

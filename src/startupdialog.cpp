@@ -22,6 +22,7 @@ StartupDialog::StartupDialog(QWidget *parent) : QDialog(parent), ui(new Ui::Star
     connect(ui->launchPushButton, &QPushButton::clicked, this, &StartupDialog::launchPushButtonClicked);
     connect(ui->refreshPushButton, &QPushButton::clicked, this, &StartupDialog::refreshPushButtonClicked);
     connect(ui->hostListView, &QListView::clicked, this, &StartupDialog::hostListViewClicked);
+    connect(ui->hostListView, &QListView::doubleClicked, this, &StartupDialog::launchPushButtonClicked);
     connect(broadcastSocket, &QUdpSocket::readyRead, this, &StartupDialog::broadcastSocketReadyRead);
 
     const QDir downloadsDir(QStandardPaths::writableLocation(QStandardPaths::DownloadLocation));
